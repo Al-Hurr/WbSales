@@ -28,6 +28,8 @@ namespace WbSales
         public void SendMsg()
         {
             Console.WriteLine("Запущен бот " + bot.GetMeAsync().Result.FirstName);
+            Console.WriteLine();
+            Console.WriteLine($"Отправка {Product.id} {Product.name} {Product.brand} {Product.salePriceU/100}\n");
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
             var receiverOptions = new ReceiverOptions
@@ -37,23 +39,28 @@ namespace WbSales
 
             var chat = new Chat
             {
-                Id = 860507683,
+                Id = _myId,
                 FirstName = "al-hurr",
                 Username = "alhurr996",
                 Type = ChatType.Private
             };
+            string date = string.Format("Акуально для {0:dd/MM/yyyy H:mm:ss zzz}", DateTime.Now);
             Message msg = bot.SendPhotoAsync(
                chatId: chat,
                photo: this.ImgUrl,
-               caption: $"<b>Название: {Product.name} {Product.brand}</b>\n<b>Цена со скидкой: {Product.salePriceU / 100}</b>\n<b>Скидка: {Product.sale} %</b>\n<b>Старая цена: {Product.priceU / 100}</b>\n<b>Id: {Product.id}</b>\n<i>Ссылка</i>: <a href=\"https://www.wildberries.ru/catalog/{Product.id}/detail.aspx?targetUrl=GP\">Посмотреть</a>",
+               caption: $"<b>Название: {Product.name} {Product.brand}</b>\n<b>Цена со скидкой: {Product.salePriceU / 100}</b>\n<b>Скидка: {Product.sale} %</b>\n<b>Старая цена: {Product.priceU / 100}</b>\n<b>Id: {Product.id}</b>\n<i>Ссылка</i>: <a href=\"https://www.wildberries.ru/catalog/{Product.id}/detail.aspx?targetUrl=GP\">Посмотреть</a>\n\n<b>{date}</b>",
                parseMode: ParseMode.Html,
                cancellationToken: cancellationToken).Result;
+
+
+            Console.WriteLine($"Отправка {Product.id} {Product.name} {Product.brand} {Product.salePriceU / 100} success\n");
 
             SaveProductInXml(Product);
         }
 
         private void SaveProductInXml(Product product)
         {
+            Console.WriteLine($"Сохранение {Product.id} {Product.name} {Product.brand} {Product.salePriceU / 100}");
             string path = Program._xmlPath;
             XmlDocument xDoc = new XmlDocument();
             xDoc.Load(path);
@@ -78,6 +85,8 @@ namespace WbSales
             price.AppendChild(priceText);
             productEl.AppendChild(price);
             xDoc.Save(path);
+
+            Console.WriteLine($"Товар {Product.id} {Product.name} {Product.brand} {Product.salePriceU / 100} сохранен");
         }
     }
 }
