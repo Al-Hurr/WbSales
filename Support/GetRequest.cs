@@ -82,7 +82,7 @@ namespace Support
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                throw;
             }
             return string.Empty;
         }

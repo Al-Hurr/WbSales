@@ -44,6 +44,8 @@ namespace WbSales
         public bool diffPrice { get; set; }
         public int? panelPromoId { get; set; }
         public string promoTextCat { get; set; }
+
+        public int SalePrice() => this.salePriceU / 100;
     }
 
     public class Root
