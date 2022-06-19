@@ -15,6 +15,7 @@ namespace WbSales
     class Program
     {
         private static int _page;
+        private static TimeSpan _sleepTime;
         private static string _imgUrl;
         public static string _xmlPath;
         private static List<Root> _deserializedProducts;
@@ -24,6 +25,7 @@ namespace WbSales
         private static void OnStart()
         {
             _page = 1;
+            _sleepTime = TimeSpan.FromMinutes(5);
             _imgUrl = "https://images.wbstatic.net/c516x688/new/urlNum/productId-1.jpg";
             _xmlPath = Directory.GetCurrentDirectory() + "\\TgProducts.xml";
             _isXmlDocExists = File.Exists(_xmlPath);
@@ -41,6 +43,7 @@ namespace WbSales
             {
                 try
                 {
+                    Console.Beep();
                     Console.WriteLine("Start bot {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
                     _deserializedProducts = GetJsonPages();
                     FilterProducts(_deserializedProducts);
@@ -55,10 +58,9 @@ namespace WbSales
                     SendProducts(_deserializedProducts);
                     SaveXmlDoc(_deserializedProducts);
                     Console.WriteLine("End {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
-                    var sleepTime = TimeSpan.FromMinutes(30);
                     _page = 1;
-                    Console.WriteLine($"Sleep to {sleepTime}");
-                    Thread.Sleep(sleepTime);
+                    Console.WriteLine($"Sleep to {_sleepTime} minutes");
+                    Thread.Sleep(_sleepTime);
                 }
                 catch (Exception ex)
                 {
@@ -168,8 +170,16 @@ namespace WbSales
                         //if (deserializedProducts.Any(x => x.data?.products?.Any(x => x.id.ToString() == id) ?? false))
                         //if (deserializedProducts.Any(x => x.data.products.Any(y => y.id.ToString() == id && y.salePriceU.ToString() == price)))
 
-                        var findedProduct = deserializedProducts.Select(x => x.data.products
-                            .FirstOrDefault(y => y.id.ToString() == id && y.salePriceU.ToString() == price)).FirstOrDefault();
+                        Product findedProduct = null;
+                        foreach (var product in deserializedProducts)
+                        {
+                            findedProduct = product.data.products.FirstOrDefault(y => y.id.ToString() == id && y.salePriceU.ToString() == price);
+                            if(findedProduct != null)
+                            {
+                                break;
+                            }
+                        }
+
                         if (findedProduct != null)
                         {
                             //удаляем товар из входящего списка, если такой уже есть в файле
@@ -219,7 +229,7 @@ namespace WbSales
                 List<Root> productList = new();
                 while (requestSuccess)
                 {
-                    Console.WriteLine($"Start get page {_page}\n");
+                    Console.Write($"Start get page {_page}");
                     var getRequest = new GetRequest($"https://wbxcatalog-ru.wildberries.ru/men_shoes/catalog?appType=1&couponsGeo=12,3,18,15,21&curr=rub&dest=-1029256,-102269,-1278703,-1255563&emp=0&kind=1&lang=ru&locale=ru&page={_page}&pricemarginCoeff=1.0&reg=0&regions=68,64,83,4,38,80,33,70,82,86,75,30,69,48,22,1,66,31,40,71&sort=popular&spp=0&stores=117673,122258,122259,125238,125239,125240,6159,507,3158,117501,120602,120762,6158,121709,124731,159402,2737,130744,117986,1733,686,132043&subject=104;105;128;130;232;396;1382;1586");
                     getRequest.Accept = "*/*";
                     getRequest.Useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36";
@@ -242,11 +252,11 @@ namespace WbSales
                     if (string.IsNullOrEmpty(response))
                     {
                         requestSuccess = false;
-                        Console.WriteLine($"Get page {_page} ended or failed\n");
+                        Console.WriteLine(" ended or failed");
                     }
                     else
                     {
-                        Console.WriteLine($"Get page {_page} success\n");
+                        Console.WriteLine(" success");
                         Root products = JsonConvert.DeserializeObject<Root>(response);
                         if (products != null && products.data?.products?.Count > 0)
                         {
