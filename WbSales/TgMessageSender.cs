@@ -27,9 +27,7 @@ namespace WbSales
         {
             try
             {
-                Console.WriteLine("Запущен бот " + bot.GetMeAsync().Result.FirstName);
-                Console.WriteLine();
-                Console.WriteLine($"Отправка {Product.id} {Product.name} {Product.brand} {Product.SalePrice()}\n");
+                Console.Write($"Отправка {Product.id} {Product.name} {Product.brand} {Product.SalePrice()}:");
                 var cts = new CancellationTokenSource();
                 var cancellationToken = cts.Token;
                 var receiverOptions = new ReceiverOptions
@@ -53,7 +51,7 @@ namespace WbSales
                    cancellationToken: cancellationToken).Result;
 
 
-                Console.WriteLine($"Отправка {Product.id} {Product.name} {Product.brand} {Product.SalePrice()} success\n");
+                Console.WriteLine($" success");
 
                 //SaveProductInXml(Product);
             }

@@ -25,9 +25,10 @@ namespace WbSales
         private static void OnStart()
         {
             _page = 1;
-            _sleepTime = TimeSpan.FromMinutes(5);
+            _sleepTime = TimeSpan.FromMinutes(15);
             _imgUrl = "https://images.wbstatic.net/c516x688/new/urlNum/productId-1.jpg";
             _xmlPath = Directory.GetCurrentDirectory() + "\\TgProducts.xml";
+            //_xmlPath = Directory.GetCurrentDirectory() + "\\TgProducts_test.xml";
             _isXmlDocExists = File.Exists(_xmlPath);
             if (_isXmlDocExists)
             {
@@ -46,6 +47,7 @@ namespace WbSales
                     Console.Beep();
                     Console.WriteLine("Start bot {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
                     _deserializedProducts = GetJsonPages();
+                    //_deserializedProducts = GetJsonPagesTest();
                     FilterProducts(_deserializedProducts);
                     if (_isXmlDocExists)
                     {
@@ -58,20 +60,122 @@ namespace WbSales
                     SendProducts(_deserializedProducts);
                     SaveXmlDoc(_deserializedProducts);
                     Console.WriteLine("End {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
-                    _page = 1;
                     Console.WriteLine($"Sleep to {_sleepTime} minutes");
                     Thread.Sleep(_sleepTime);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("Message: " + ex);
-                }
-                finally
-                {
-                    var sleepTime = TimeSpan.FromMinutes(5);
-                    Console.WriteLine($"Sleep to {sleepTime}");
+                    Console.WriteLine($"Sleep to 30 seconds");
+                    Thread.Sleep(TimeSpan.FromSeconds(30));
                 }
             }
+        }
+
+        private static List<Root> GetJsonPagesTest()
+        {
+            //TODO: 2 листа, в каждом листе 5 продуктов
+            return new List<Root>
+            {
+                new Root
+                {
+                    data = new Data
+                    {
+                        products = new List<Product>
+                        {
+                            new Product
+                            {
+                                id = 1,
+                                brand = "brand1",
+                                name = "name1",
+                                priceU = 299_900,
+                                salePriceU = 231_900,
+                            },
+                            new Product
+                            {
+                                id = 2,
+                                brand = "brand2",
+                                name = "name2",
+                                priceU = 299_900,
+                                salePriceU = 131_900,
+                            },
+                            new Product
+                            {
+                                id = 3,
+                                brand = "brand3",
+                                name = "name3",
+                                priceU = 499_900,
+                                salePriceU = 1_131_900,
+                            },
+                            new Product
+                            {
+                                id = 4,
+                                brand = "brand4",
+                                name = "name4",
+                                priceU = 599_900,
+                                salePriceU = 1_100_900,
+                            },
+                            new Product
+                            {
+                                id = 5,
+                                brand = "brand5",
+                                name = "name5",
+                                priceU = 255_555,
+                                salePriceU = 400_900,
+                            },
+                        }
+                    }
+                },
+                new Root
+                {
+                    data = new Data
+                    {
+                        products = new List<Product>
+                        {
+                            new Product
+                            {
+                                id = 6,
+                                brand = "brand6",
+                                name = "name6",
+                                priceU = 700_000,
+                                salePriceU = 600_000,
+                            },
+                            new Product
+                            {
+                                id = 7,
+                                brand = "brand7",
+                                name = "name7",
+                                priceU = 550_000,
+                                salePriceU = 500_900,
+                            },
+                            new Product
+                            {
+                                id = 8,
+                                brand = "brand8",
+                                name = "name8",
+                                priceU = 190_000,
+                                salePriceU = 131_900,
+                            },
+                            new Product
+                            {
+                                id = 9,
+                                brand = "brand9",
+                                name = "name9",
+                                priceU = 666_666,
+                                salePriceU = 777_777,
+                            },
+                            new Product
+                            {
+                                id = 12,
+                                brand = "brand12",
+                                name = "name12",
+                                priceU = 122_222,
+                                salePriceU = 333_333,
+                            },
+                        }
+                    }
+                }
+            };
         }
 
         private static void SaveXmlDoc(List<Root> deserializedProducts)
@@ -107,12 +211,14 @@ namespace WbSales
                     }
                 }
                 _xDoc.Save(_xmlPath);
+                _isXmlDocExists = true;
             }
         }
 
         private static void FilterProducts(List<Root> deserializedProducts)
         {
             //TODO: Create Filter from JSON
+            Console.Write($"Start FilterProducts");
             Filter filter = new()
             {
                 Price = 4500,
@@ -141,6 +247,9 @@ namespace WbSales
                     .RemoveAll(product => product.SalePrice() > filter.Price
                     || !filter.Sizes.Any(filterSize => product.sizes.Any(pSize => pSize.name == filterSize))
                     || !filter.Brands.Any(brand => brand == product.brand)));
+
+            Console.WriteLine($" success");
+            Console.WriteLine($"Количество товаров после фильтрации: {deserializedProducts.Sum(x => x.data.products.Count)}");
         }
 
         private static void CreateXmlDoc()
@@ -156,6 +265,8 @@ namespace WbSales
 
         private static void RemoveMissingProductFromDoc(List<Root> deserializedProducts)
         {
+            Console.WriteLine($"Удаление законченных товаров из файла");
+            Console.WriteLine($"Удаление имеющихся товаров из входящего списка");
             if (_deserializedProducts?.Count > 0)
             {
                 XmlElement xRoot = _xDoc.DocumentElement;
@@ -197,11 +308,14 @@ namespace WbSales
                 }
 
                 elementsForRemove.ForEach(x => xRoot.RemoveChild(x));
+                Console.WriteLine($"Количество удаленных товаров из файла: {elementsForRemove.Count}");
+                Console.WriteLine($"Количество товаров после проверки на наличие в файле: {deserializedProducts.Sum(x => x.data.products.Count)}");
             }
         }
 
         private static void SendProducts(List<Root> deserializedProducts)
         {
+            Console.WriteLine("Отправка товаров");
             if (deserializedProducts?.Count > 0)
             {
                 foreach (var productsPage in deserializedProducts)
@@ -211,13 +325,14 @@ namespace WbSales
                         foreach (var product in productsPage.data.products)
                         {
                             string imgUrl = GetProductImgById(product);
-                            Console.WriteLine("Запуск бота");
                             var tgMessageSender = new TgMessageSender(product, imgUrl);
                             tgMessageSender.SendMsg();
                         }
                     }
                 }
             }
+
+            Console.WriteLine("Отправка товаров success");
         }
 
         private static List<Root> GetJsonPages()
@@ -256,15 +371,19 @@ namespace WbSales
                     }
                     else
                     {
-                        Console.WriteLine(" success");
                         Root products = JsonConvert.DeserializeObject<Root>(response);
                         if (products != null && products.data?.products?.Count > 0)
                         {
                             productList.Add(products);
                         }
                         _page++;
+                        Console.WriteLine(" success");
                     }
                 }
+
+                Console.WriteLine($"Всего товаров: {productList.Sum(x => x.data.products.Count)}");
+                Console.WriteLine($"Всего страниц: {productList.Count}");
+                _page = 1;
                 return productList;
             }
             catch (AggregateException err)
