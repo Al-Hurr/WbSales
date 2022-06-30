@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using Support;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -25,7 +27,7 @@ namespace WbSales
         private static void OnStart()
         {
             _page = 1;
-            _sleepTime = TimeSpan.FromMinutes(15);
+            _sleepTime = TimeSpan.FromMinutes(30);
             _imgUrl = "https://images.wbstatic.net/c516x688/new/urlNum/productId-1.jpg";
             _xmlPath = Directory.GetCurrentDirectory() + "\\TgProducts.xml";
             //_xmlPath = Directory.GetCurrentDirectory() + "\\TgProducts_test.xml";
@@ -217,39 +219,31 @@ namespace WbSales
 
         private static void FilterProducts(List<Root> deserializedProducts)
         {
-            //TODO: Create Filter from JSON
-            Console.Write($"Start FilterProducts");
-            Filter filter = new()
+            try
             {
-                Price = 4500,
-                Brands = new List<string>
-                            {
-                                "New balance" ,
-                                "adidas",
-                                "TIMBERLAND",
-                                "ASICS",
-                                "Saucony Originals",
-                                "Under Armour",
-                                "Reebok",
-                                "Nike",
-                                "PUMA",
-                                "FILA",
-                                "Tommy Hilfiger"
-                            },
-                Sizes = new List<string>
-                            {
-                                "41,5", "42", "42,5", "43"
-                            }
-            };
+                //TODO: Create Filter from JSON
+                Console.Write($"Start FilterProducts");
 
-            deserializedProducts
-                .ForEach(x => x.data.products
-                    .RemoveAll(product => product.SalePrice() > filter.Price
-                    || !filter.Sizes.Any(filterSize => product.sizes.Any(pSize => pSize.name == filterSize))
-                    || !filter.Brands.Any(brand => brand == product.brand)));
+                Filter filter = new()
+                {
+                    Price = int.Parse(ConfigurationManager.AppSettings.Get("Price")),
+                    Brands = ConfigurationManager.AppSettings.Get("Brands").Split('/').ToList<string>(),
+                    Sizes = ConfigurationManager.AppSettings.Get("Sizes").Split('/').ToList<string>()
+                };
 
-            Console.WriteLine($" success");
-            Console.WriteLine($"Количество товаров после фильтрации: {deserializedProducts.Sum(x => x.data.products.Count)}");
+                deserializedProducts
+                    .ForEach(x => x.data.products
+                        .RemoveAll(product => product.SalePrice() > filter.Price
+                        || !filter.Sizes.Any(filterSize => product.sizes.Any(pSize => pSize.name == filterSize))
+                        || !filter.Brands.Any(brand => brand == product.brand)));
+
+                Console.WriteLine($" success");
+                Console.WriteLine($"Количество товаров после фильтрации: {deserializedProducts.Sum(x => x.data.products.Count)}");
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         private static void CreateXmlDoc()

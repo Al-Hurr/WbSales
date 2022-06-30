@@ -28,7 +28,7 @@ namespace WbSales
             try
             {
                 Console.Write($"Отправка {Product.id} {Product.name} {Product.brand} {Product.SalePrice()}:");
-                var cts = new CancellationTokenSource();
+                var cts = new CancellationTokenSource(); 
                 var cancellationToken = cts.Token;
                 var receiverOptions = new ReceiverOptions
                 {
@@ -42,7 +42,7 @@ namespace WbSales
                     Username = "alhurr996",
                     Type = ChatType.Private
                 };
-                string date = string.Format("Акуально для {0:dd/MM/yyyy H:mm:ss zzz}", DateTime.Now);
+                string date = string.Format("Актуально для {0:dd/MM/yyyy H:mm:ss zzz}", DateTime.Now);
                 Message msg = bot.SendPhotoAsync(
                    chatId: chat,
                    photo: this.ImgUrl,
