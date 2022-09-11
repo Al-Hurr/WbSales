@@ -9,6 +9,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml;
+using WbSales.JsonToSharpClasses;
 
 namespace WbSales
 {
@@ -18,8 +19,8 @@ namespace WbSales
         private static TimeSpan _sleepTime;
         private static string _imgUrl;
         public static string _xmlPath;
-        private static List<Root> _deserializedProducts;
         private static XmlDocument _xDoc;
+        private static Filter _filter;
         private static bool _isXmlDocExists;
 
         private static void OnStart()
@@ -35,30 +36,33 @@ namespace WbSales
                 _xDoc = new();
                 _xDoc.Load(_xmlPath);
             }
+            TgMessageSender.StartListening();
         }
 
         static void Main(string[] args)
         {
             OnStart();
-            while (true)
+            List<Root> deserializedProducts;
+            while (true) ;
+            while (false)
             {
                 try
                 {
                     //Console.Beep();
                     Console.WriteLine("Start bot {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
-                    _deserializedProducts = GetJsonPages();
+                    deserializedProducts = GetJsonPages();
                     //_deserializedProducts = GetJsonPagesTest();
-                    FilterProducts(_deserializedProducts);
+                    FilterProducts(deserializedProducts);
                     if (_isXmlDocExists)
                     {
-                        RemoveMissingProductFromDoc(_deserializedProducts);
+                        RemoveMissingProductFromDoc(deserializedProducts);
                     }
                     else
                     {
                         CreateXmlDoc();
                     }
-                    SendProducts(_deserializedProducts);
-                    SaveXmlDoc(_deserializedProducts);
+                    SendProducts(deserializedProducts);
+                    SaveXmlDoc(deserializedProducts);
                     Console.WriteLine("End {0:MM/dd/yy H:mm:ss zzz}\n", DateTime.Now);
                     Console.WriteLine($"Sleep to {_sleepTime} minutes");
                     Thread.Sleep(_sleepTime);
@@ -66,12 +70,13 @@ namespace WbSales
                 catch (Exception ex)
                 {
                     Console.WriteLine("Message: " + ex);
-                    Console.WriteLine($"Sleep to 30 seconds");
-                    Thread.Sleep(TimeSpan.FromSeconds(30));
+                    Console.WriteLine($"Sleep to 10 seconds");
+                    Thread.Sleep(TimeSpan.FromSeconds(10));
                 }
             }
         }
 
+        #region Get Json Pages Test
         private static List<Root> GetJsonPagesTest()
         {
             //TODO: 2 листа, в каждом листе 5 продуктов
@@ -177,7 +182,9 @@ namespace WbSales
                 }
             };
         }
+        #endregion
 
+        #region Save Xml Doc
         private static void SaveXmlDoc(List<Root> deserializedProducts)
         {
             if (deserializedProducts?.Count > 0)
@@ -214,7 +221,9 @@ namespace WbSales
                 _isXmlDocExists = true;
             }
         }
+        #endregion
 
+        #region Filter Products
         private static void FilterProducts(List<Root> deserializedProducts)
         {
             try
@@ -222,18 +231,23 @@ namespace WbSales
                 //TODO: Create Filter from JSON
                 Console.Write($"Start FilterProducts");
 
-                Filter filter = new()
+                if (_filter == null)
                 {
-                    Price = int.Parse(ConfigurationManager.AppSettings.Get("Price")),
-                    Brands = ConfigurationManager.AppSettings.Get("Brands").Split('/').ToList<string>(),
-                    Sizes = ConfigurationManager.AppSettings.Get("Sizes").Split('/').ToList<string>()
-                };
+                    _filter = new()
+                    {
+                        PriceLow = int.Parse(ConfigurationManager.AppSettings.Get("PriceLow")),
+                        PriceHight = int.Parse(ConfigurationManager.AppSettings.Get("PriceHight")),
+                        Brands = ConfigurationManager.AppSettings.Get("Brands").Split('/').ToList<string>(),
+                        Sizes = ConfigurationManager.AppSettings.Get("Sizes").Split('/').ToList<string>()
+                    };
+                }
 
                 deserializedProducts
                     .ForEach(x => x.data.products
-                        .RemoveAll(product => product.SalePrice() > filter.Price
-                        || !filter.Sizes.Any(filterSize => product.sizes.Any(pSize => pSize.name == filterSize))
-                        || !filter.Brands.Any(brand => brand == product.brand)));
+                        .RemoveAll(product =>
+                        (product.SalePrice < _filter.PriceLow || product.SalePrice > _filter.PriceHight)
+                        || !_filter.Sizes.Any(filterSize => product.sizes.Any(pSize => pSize.name == filterSize))
+                        || !_filter.Brands.Any(brand => brand == product.brand)));
 
                 Console.WriteLine($" success");
                 Console.WriteLine($"Количество товаров после фильтрации: {deserializedProducts.Sum(x => x.data.products.Count)}");
@@ -243,7 +257,9 @@ namespace WbSales
                 throw;
             }
         }
+        #endregion
 
+        #region Create Xml Doc
         private static void CreateXmlDoc()
         {
             XmlDocument doc = new XmlDocument();
@@ -254,12 +270,14 @@ namespace WbSales
             doc.AppendChild(xProducts);
             _xDoc = doc;
         }
+        #endregion
 
+        #region Remove Missing Product From Doc
         private static void RemoveMissingProductFromDoc(List<Root> deserializedProducts)
         {
             Console.WriteLine($"Удаление законченных товаров из файла");
             Console.WriteLine($"Удаление имеющихся товаров из входящего списка");
-            if (_deserializedProducts?.Count > 0)
+            if (deserializedProducts?.Count > 0)
             {
                 XmlElement xRoot = _xDoc.DocumentElement;
                 List<XmlElement> elementsForRemove = new();
@@ -274,7 +292,7 @@ namespace WbSales
                         foreach (var product in deserializedProducts)
                         {
                             findedProduct = product.data.products.FirstOrDefault(y => y.id.ToString() == id && y.salePriceU.ToString() == price);
-                            if(findedProduct != null)
+                            if (findedProduct != null)
                             {
                                 break;
                             }
@@ -301,7 +319,9 @@ namespace WbSales
                 Console.WriteLine($"Количество товаров после проверки на наличие в файле: {deserializedProducts.Sum(x => x.data.products.Count)}");
             }
         }
+        #endregion
 
+        #region Send Products
         private static void SendProducts(List<Root> deserializedProducts)
         {
             Console.WriteLine("Отправка товаров");
@@ -328,7 +348,9 @@ namespace WbSales
 
             Console.WriteLine("Отправка товаров success");
         }
+        #endregion
 
+        #region Get Json Pages
         private static List<Root> GetJsonPages()
         {
             try
@@ -369,6 +391,8 @@ namespace WbSales
                         if (products != null && products.data?.products?.Count > 0)
                         {
                             productList.Add(products);
+                            // Для теста!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                            return productList;
                         }
                         _page++;
                         Console.WriteLine(" success");
@@ -395,13 +419,16 @@ namespace WbSales
 
             return null;
         }
+        #endregion
 
-        private static string GetProductImgById(Product product)
+        #region Get Product Image From Id
+        public static string GetProductImgById(Product product)
         {
             string productId = product.id.ToString();
             Regex regex = new("[0-9]");
             string urlNum = regex.Replace(productId, "0", 4, productId.Length - 4);
             return _imgUrl.Replace("urlNum", urlNum).Replace("productId", productId);
         }
+        #endregion
     }
 }

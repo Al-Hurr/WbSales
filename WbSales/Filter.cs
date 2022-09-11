@@ -10,13 +10,15 @@ namespace WbSales
     {
         public List<string> Brands { get; set; }
         public List<string> Sizes { get; set; }
-        public int Price { get; set; }
+        public int PriceLow { get; set; }
+        public int PriceHight { get; set; }
+
         public Filter()
         {
 
         }
 
-        public Filter(List<string> brands, List<string> sizes, int price)
+        public Filter(List<string> brands, List<string> sizes, int priceHigth)
         {
             if(brands != null)
             {
@@ -26,7 +28,7 @@ namespace WbSales
             {
                 Sizes = sizes;
             }
-            Price = price;
+            PriceHight = priceHigth;
         }
     }
 }
